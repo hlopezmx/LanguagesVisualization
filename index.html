@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SOAS Languages</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="loading">
+    <div class="center"><img src="images/loading.gif"></div>
+</div>
+<div class="container" style="display:none">
+    <div id="controls">
+        <form id="filterform">
+            <span>Filter by </span>
+            &nbsp;&nbsp;&nbsp;
+            <span>Language: <select id="Language" class="filter"></select></span>
+            &nbsp;&nbsp;&nbsp;
+            <label><input type="checkbox" value="1" id="radarCheck" name="radarCheck" checked> Radar</label>
+            &nbsp;&nbsp;&nbsp;
+            <label><input type="checkbox" value="1" id="animateConnectionsCheck" name="animateConnectionsCheck" checked> Animate connections</label>
+            &nbsp;&nbsp;&nbsp;
+            <input type="button" value="reset" onclick="javascript:location.reload();">
+            <input type="button" id="exportImageBtn" value="export">
+        </form>
+    </div>
+    <div id="chart"></div>
+</div>
+<iframe id="printingIFrame" name="printingIFrame" width="100" height="100" style="left:-2000px;position:absolute;"></iframe>
+<div id='output'>
+    <canvas id="cvs" width="1024" height="768" style="display: none;"></canvas>
+</div>
+
+
+<script src="js/jquery-2.2.3.min.js" charset="utf-8"></script>
+<script src="js/d3.min.js" charset="utf-8"></script>
+<script src="js/topojson.js" charset="utf-8"></script>
+<script type="text/javascript" src="http://gabelerner.github.io/canvg/rgbcolor.js"></script>
+<script type="text/javascript" src="http://gabelerner.github.io/canvg/StackBlur.js"></script>
+<script type="text/javascript" src="http://gabelerner.github.io/canvg/canvg.js"></script>
+<!--<script src="js/canvg.js" charset="utf-8"></script>-->
+<script src="js/helpers.js" charset="utf-8"></script>
+<script src="js/soas_languages.js" charset="utf-8"></script>
+</body>
+</html>

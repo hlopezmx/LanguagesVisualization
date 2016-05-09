@@ -13,32 +13,6 @@ function convertDEGtoDD(degrees, direction) {
     return dd;
 }
 
-/***
- * Call this method to calibrate to test the map calibration using master points.
- */
-function calibrateMap() {
-    var masterPoints = [
-        {color: '#ff0000', name: 'Center', long: 0, lat: 0},
-        {color: '#00ff00', name: 'Alaska', long: -168.003261, lat: 65.717667},
-        {color: '#0000ff', name: 'London', long: 0.1275, lat: 51.5072},
-        {color: '#00ffff', name: 'Tasmania', long: 147.716875, lat: -42.092606},
-        {color: '#ffff00', name: 'Kamchatka', long: 157.175854, lat: 51.455301}
-    ];
-
-    g.selectAll("circle")
-        .data(masterPoints)
-        .enter()
-        .append("a")
-        .append("circle")
-        .attr("class", "target")
-        .attr("cx", function (d) {
-            return projection([d.long, d.lat])[0];
-        })
-        .attr("cy", function (d) {
-            return projection([d.long, d.lat])[1];
-        })
-        .attr("r", 3)
-}
 
 
 /***
@@ -71,16 +45,6 @@ function initItem(d) {
     }
 
     return d;
-}
-
-
-function loadData() {
-    if (setting.calibrateMap) {     // display calibration points
-        calibrateMap();
-    } else {                        // load data set
-        loadDataCSV();
-    }
-    animateRadar();
 }
 
 function resonatePointsByRadar(radarX) {
@@ -201,3 +165,42 @@ var QueryString = function () {
     }
     return query_string;
 }();
+
+function animationsManager(flag) {
+
+    // if it's set to not animate, abort
+    if (!setting.animateConnections) flag = false;
+
+    // we never animate if we are printing
+    if (bPrinting) flag = false;
+
+    if (flag)
+        connectionAnimations = setInterval(animateConnections, (Math.random() + 0.5) * setting.connectionRefresh);
+    else
+        clearInterval(connectionAnimations);
+}
+
+function printMap() {
+    var svg1 = jQuery('#chart').html().replace(/>\s+/g, ">").replace(/\s+</g, "<");
+
+    canvg('cvs', svg1, {
+        ignoreMouse: true,
+        ignoreAnimation: true
+    });
+
+    var canvas = document.getElementById('cvs');
+
+    img = canvas.toDataURL("image/png", 1);
+
+    var a = document.createElement('a');
+    a.href = img;
+    a.download = "image.png";
+    var clickEvent = new MouseEvent("click", {
+        "view": window,
+        "bubbles": true,
+        "cancelable": false
+    });
+    a.dispatchEvent(clickEvent);
+
+    parent.document.getElementById('exportImageBtn').value = 'export';
+}

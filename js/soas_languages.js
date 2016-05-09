@@ -1,38 +1,45 @@
-var alldata = [];
-var workingdata = [];
-var filters = [];
-var bDataLoaded = false;
-var currentZoom = 1;
-var gDataPoints;
-var resonatingPoints = [];
-var gConnections;
-var radar;
-var iAnimateConnection = 0;
-var connectionAnimations;
+// DATA ARRAYS
+var alldata = [],           // loaded data from CSV
+    workingdata = [],       // filtered data
+    filters = [],           // filters set
+    aConnections = [],      // arc lines between source and destiny
+    resonatingPoints = [];  // target points, to animate radar
 
-var aConnections = [];
+// FLAGS:
+var bDataLoaded = false;    // flag so we only read the CSV file once
+
+// STATUS VARIABLES
+var currentZoom = 1,
+    iAnimateConnection = 0,
+    connectionAnimations;
+
+// SVG OBJECTS
+var gDataPoints,
+    gConnections,
+    radar;
 
 // SETTINGS
 var setting = {
     dataFile: 'languages.csv'    // the source data file
-    , calibrateMap: false       // displays master points to help map calibration
     , svgHeight: '100vh'        // SVG area height
     , svgWidth: '100vw'         // SVG area width
     , maxLong: 188              // the limit of world longitude (180)
     , maxLat: 93                // the limit of world latitude (90)
     , mapImageRatio: 0.5        // ration between width and height
+    , projectionScale: 200      // scale for projection (automatically updated when printing)
     , mapWidth: 960             // map Width
     , mapHeight: 480            // map Height
-    , targetRadio: 5
-    , radarWidth: 150
-    , radarMaxOpacity: 0.15
-    , radarDuration: 7500
-    , connectionFadeOut: 5000
-    , connectionRefresh: 300
-    , animateRadar: true
-    , animateConnections: true
+    , targetRadio: 5            // radio of the target circle
+    , radarWidth: 150           // width of the radar's tail
+    , radarMaxOpacity: 0.15     // opacity of the radar at the brightest line
+    , radarDuration: 7500       // milliseconds for the radar to complete a loop
+    , connectionFadeOut: 5000   // milliseconds for the connection lines to fade out
+    , connectionRefresh: 300    // milliseconds factor for the connection lines to refresh after fadeout
+    , animateRadar: true        // flag to turn on/off the radar
+    , animateConnections: true  // flag to turn on/off the data connection fadeout and refresh
 }
 
+// PROFICIENCY COLOUR MAPPING
 var proficiencyColor = [];
 proficiencyColor[1] = '#f2a900';
 proficiencyColor[2] = '#63666a';
@@ -46,18 +53,18 @@ proficiencyColor[9] = '#a4d65e';
 proficiencyColor[10] = '#5c068c';
 proficiencyColor[11] = '#f0e1cf';
 
+// PARAMETERS
 var bPrinting = QueryString.p == "1" ? true : false;
-var projectionScale;
 
-
+// PRINTING / VIEW RECONFIGURATION
 if (bPrinting) {
     setting.svgWidth = '200vw';
     setting.svgHeight = '200vh';
-    projectionScale = 400;
+    setting.projectionScale = 400;
 } else {
     setting.svgWidth = '100vw';
     setting.svgHeight = '100vh';
-    projectionScale = 200;
+    setting.projectionScale = 200;
 }
 
 var theSVG = d3.select('#chart')
@@ -82,7 +89,7 @@ theSVG
     .attr("xmlns", "http://www.w3.org/2000/svg")
 
 var projection = d3.geo.equirectangular()
-    .scale(projectionScale)
+    .scale(setting.projectionScale)
     .translate([setting.mapWidth / 2, setting.mapHeight / 2])
 
 var path = d3.geo.path()
@@ -193,25 +200,7 @@ var tooltip = d3.select('body')
     .attr('class', 'tooltip')
 
 
-function closetooltip() {
-    tooltip.transition()
-        .style('opacity', 0)
-        .style('display', 'none');
-
-    d3.selectAll('.target')
-        .style('r', setting.targetRadio / currentZoom)
-
-    // restores the width of all the connections
-    d3.selectAll('.connection')
-        .style('stroke-width', (1 / currentZoom) + 'px')
-
-    // restart connection animations
-    animationsManager(true);
-
-    bTooltipActive = false;
-}
-
-function loadDataCSV(filterBy, filterValue) {
+function loadData(filterBy, filterValue) {
 
     // update the filters array
     if (filterBy != null) {
@@ -258,18 +247,9 @@ function loadDataCSV(filterBy, filterValue) {
                 // if the filter is empty, then we don't check against it
                 if (filters[key] == "") continue;
 
-                // for year, we look in a range
-                /*
-                 if (filterBy == 'year') {
-                 if ((filterValue < alldata[iRow]['yearStart']) || (filterValue > alldata[iRow]['yearEnd'])) {
-                 bSelectRow = false;
-                 }
-                 } else { // for every other filter, we look fo the exact value
-                 */
                 if (alldata[iRow][key] != filters[key]) {
                     bSelectRow = false;
                 }
-                //}
             }
 
             // if passed the filters, then add it to the working data set
@@ -279,6 +259,7 @@ function loadDataCSV(filterBy, filterValue) {
         }
         displayData();
     }
+    animateRadar();
 }
 
 
@@ -447,7 +428,7 @@ $(document).ready(function () {
     $(".filter").change(function () {
         var filterBy = $(this).attr("id");
         var filterValue = $(this).val();
-        loadDataCSV(filterBy, filterValue);
+        loadData(filterBy, filterValue);
     })
 
     $("#radarCheck").change(function () {
@@ -469,47 +450,9 @@ function animateConnections() {
     animateConnection(aConnections[iAnimateConnection], iAnimateConnection);
 }
 
-function animationsManager(flag) {
-
-    // if it's set to not animate, abort
-    if (!setting.animateConnections) flag = false;
-
-    // we never animate if we are printing
-    if (bPrinting) flag = flag = false;
-
-    if (flag)
-        connectionAnimations = setInterval(animateConnections, (Math.random() + 0.5) * setting.connectionRefresh);
-    else
-        clearInterval(connectionAnimations);
-}
-
 document.getElementById('exportImageBtn').onclick = function () {
     $(this).val('exporting...');
     document.getElementById('printingIFrame').src = "index.html?p=1";
 };
 
 
-function printMap() {
-    var svg1 = jQuery('#chart').html().replace(/>\s+/g, ">").replace(/\s+</g, "<");
-
-    canvg('cvs', svg1, {
-        ignoreMouse: true,
-        ignoreAnimation: true
-    });
-
-    var canvas = document.getElementById('cvs');
-
-    img = canvas.toDataURL("image/png", 1);
-
-    var a = document.createElement('a');
-    a.href = img;
-    a.download = "image.png";
-    var clickEvent = new MouseEvent("click", {
-        "view": window,
-        "bubbles": true,
-        "cancelable": false
-    });
-    a.dispatchEvent(clickEvent);
-
-    parent.document.getElementById('exportImageBtn').value = 'export';
-}

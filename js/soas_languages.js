@@ -16,27 +16,31 @@ var currentZoom = 1,
 // SVG OBJECTS
 var gDataPoints,
     gConnections,
-    radar;
+    radar,
+    menu;
 
 // SETTINGS
 var setting = {
-    dataFile: 'languages.csv'    // the source data file
-    , svgHeight: '100vh'        // SVG area height
-    , svgWidth: '100vw'         // SVG area width
-    , maxLong: 188              // the limit of world longitude (180)
-    , maxLat: 93                // the limit of world latitude (90)
-    , mapImageRatio: 0.5        // ration between width and height
-    , projectionScale: 200      // scale for projection (automatically updated when printing)
-    , mapWidth: 960             // map Width
-    , mapHeight: 480            // map Height
-    , targetRadio: 5            // radio of the target circle
-    , radarWidth: 150           // width of the radar's tail
-    , radarMaxOpacity: 0.15     // opacity of the radar at the brightest line
-    , radarDuration: 7500       // milliseconds for the radar to complete a loop
-    , connectionFadeOut: 5000   // milliseconds for the connection lines to fade out
-    , connectionRefresh: 300    // milliseconds factor for the connection lines to refresh after fadeout
-    , animateRadar: true        // flag to turn on/off the radar
-    , animateConnections: true  // flag to turn on/off the data connection fadeout and refresh
+    dataFile: 'languages.csv'       // the source data file
+    , svgHeight: '100vh'            // SVG area height
+    , svgWidth: '100vw'             // SVG area width
+    , maxLong: 188                  // the limit of world longitude (180)
+    , maxLat: 93                    // the limit of world latitude (90)
+    , mapImageRatio: 0.5            // ration between width and height
+    , projectionScale: 200          // scale for projection (automatically updated when printing)
+    , mapWidth: 960                 // map Width
+    , mapHeight: 480                // map Height
+    , targetRadio: 5                // radio of the target circle
+    , radarWidth: 150               // width of the radar's tail
+    , radarMaxOpacity: 0.15         // opacity of the radar at the brightest line
+    , radarDuration: 7500           // milliseconds for the radar to complete a loop
+    , connectionFadeOut: 5000       // milliseconds for the connection lines to fade out
+    , connectionRefresh: 300        // milliseconds factor for the connection lines to refresh after fadeout
+    , animateRadar: false           // flag to turn on/off the radar
+    , animateConnections: true      // flag to turn on/off the data connection fadeout and refresh
+    , menuWidht: 140                // filter menu width
+    , menuFontSize: '12px'          // font size in filter menu
+    , menuSubtitleFontSize: '14px'  // title font size in filter menu
 }
 
 // PROFICIENCY COLOUR MAPPING
@@ -70,9 +74,8 @@ if (bPrinting) {
 var theSVG = d3.select('#chart')
     .append('svg')
     .attr('id', 'svg')
-    .attr('width', setting.svgWidth)
-    .attr('height', setting.svgHeight)
-
+    .style('width', setting.svgWidth)
+    .style('height', setting.svgHeight)
 
 if (bPrinting) {
     theSVG.style('display', 'none');
@@ -172,6 +175,41 @@ d3.json("world-50m.json", function (error, world) {
         .style("display", "inline")
         .attr("x", -setting.radarWidth)
 
+
+    menu = theSVG.append('g')
+
+    var menuBackground = menu.append('rect')
+        .attr('width', setting.menuWidht)
+        .attr('height', setting.mapHeight)
+        .style('fill', 'rgba(50,50,50,0.7)')
+    var menuline = menu.append('line')
+        .attr('x1', setting.menuWidht)
+        .attr('x2', setting.menuWidht)
+        .attr('y1', 0)
+        .attr('y2', setting.mapHeight)
+        .style('stroke', 'white')
+        .style('stroke-width', '1px')
+
+    svgButton(20, 10, 'reset', function () {
+        location.reload();
+    });
+    svgButton(20, 35, 'export', function () {
+        $('.loading').show();
+        document.getElementById('printingIFrame').src = "index.html?p=1";
+    });
+    svgLabel(0, 60, 'Animations:');
+
+    var radarCheckbox = new D3Checkbox(20, 85, 'Radar', setting.animateRadar, function () {
+        setting.animateRadar = radarCheckbox.status;
+        animateRadar();
+    });
+
+    var connectionsCheckbox = new D3Checkbox(20, 105, 'Connections', setting.animateConnections, function () {
+        setting.animateConnections = connectionsCheckbox.status;
+        animationsManager(setting.animateConnections);
+        displayData();
+    });
+    svgLabel(0, 125, 'Languages Filter:');
 
     loadData();
 });
@@ -381,7 +419,6 @@ function displayData() {
                 .style('left', (d3.event.pageX + 10) + 'px')
                 .style('top', (d3.event.pageY + 10) + 'px')
 
-
             //reset all target radio
             d3.selectAll('.target')
                 .style('r', setting.targetRadio / currentZoom)
@@ -424,23 +461,6 @@ $(document).ready(function () {
 
     $("#printingIFrame").width('100vw');
     $("#printingIFrame").height('100vh');
-
-    $(".filter").change(function () {
-        var filterBy = $(this).attr("id");
-        var filterValue = $(this).val();
-        loadData(filterBy, filterValue);
-    })
-
-    $("#radarCheck").change(function () {
-        setting.animateRadar = $(this).prop("checked");
-        animateRadar();
-    })
-
-    $("#animateConnectionsCheck").change(function () {
-        setting.animateConnections = $(this).prop("checked");
-        animationsManager(setting.animateConnections);
-        displayData();
-    })
 })
 
 function animateConnections() {
@@ -449,10 +469,3 @@ function animateConnections() {
 
     animateConnection(aConnections[iAnimateConnection], iAnimateConnection);
 }
-
-document.getElementById('exportImageBtn').onclick = function () {
-    $(this).val('exporting...');
-    document.getElementById('printingIFrame').src = "index.html?p=1";
-};
-
-

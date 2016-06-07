@@ -14,7 +14,6 @@ function convertDEGtoDD(degrees, direction) {
 }
 
 
-
 /***
  * Transform the data set into the structure we will be working with
  * @param d
@@ -25,7 +24,7 @@ function initItem(d) {
     var latTmp = d['Latitude'].replace('°', '').split(" ");
 
     d.LongDD = parseFloat(convertDEGtoDD(longTmp[0], longTmp[1]) + (Math.random() * 0.5 - 0.25)).toFixed(4);
-    d.LatDD = parseFloat(convertDEGtoDD(latTmp[0], latTmp[1]) + (Math.random() *0.5 - 0.25)).toFixed(4);
+    d.LatDD = parseFloat(convertDEGtoDD(latTmp[0], latTmp[1]) + (Math.random() * 0.5 - 0.25)).toFixed(4);
 
     // London is always the source point
     d.sourceX = projection([0.1275, 51.5072])[0];
@@ -129,19 +128,63 @@ function populateFilter(data, field, selector_id) {
         return a.toLowerCase().localeCompare(b.toLowerCase());
     });
 
-    var sel = document.getElementById(selector_id);
-    var opt = document.createElement('option');
-    opt.innerHTML = '-- All --';
-    opt.value = '';
-    sel.appendChild(opt);
-    for (var i = 0; i < filteredData.length; i++) {
-        var opt = document.createElement('option');
-        opt.innerHTML = filteredData[i];
-        opt.value = filteredData[i];
-        sel.appendChild(opt);
+
+    // fill side menu
+    if (selector_id == 'Language') {
+
+        // the "All languages" item
+        listLanguage("ALL", 0);
+
+        for (var iLanguage = 1; iLanguage <= filteredData.length; iLanguage++) {
+            listLanguage(filteredData[iLanguage-1], iLanguage);
+        }
     }
 }
 
+function listLanguage(language, iLanguage) {
+
+    if (language === undefined) return;
+
+    var thisLanguage = menu.append('g')
+        .style('cursor', 'pointer')
+
+    thisLanguage.append('rect')
+        .classed('menu-language', true)
+        .attr('x', 0)
+        .attr('y', iLanguage * (parseInt(setting.menuFontSize.replace('px')) + 10) + 150)
+        .attr('width', setting.menuWidht)
+        .attr('height', 20)
+        .style('fill', 'rgba(200,200,120,0.0)')
+        .on('mouseover', function () {
+            d3.selectAll('.menu-language')
+                .attr('fill', '#ccc')
+                .style('font-weight', 'normal')
+                .style('fill', 'rgba(200,200,120,0.0)')
+
+            d3.select(this)
+                .attr('fill', '#ffa')
+                .style('font-weight', 'bold')
+                .style('fill', 'rgba(200,200,120,0.4)')
+
+            //var language = $(this).html() == "ALL" ? "" : $(this).html();
+            language = language == "ALL" ? "" : language;
+            loadData("Language", language);
+
+        })
+
+    thisLanguage.append('text')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', setting.menuFontSize)
+        .attr('fill', '#ccc')
+        .attr('x', 10)
+        .attr("y", iLanguage * (parseInt(setting.menuFontSize.replace('px')) + 10) + 165)
+        .text(language)
+        .style('cursor', 'pointer')
+        .on('mouseover', function () {
+
+        })
+
+}
 
 var QueryString = function () {
     // This function is anonymous, is executed immediately and
@@ -202,5 +245,162 @@ function printMap() {
     });
     a.dispatchEvent(clickEvent);
 
-    parent.document.getElementById('exportImageBtn').value = 'export';
+    parent.document.getElementsByClassName('loading')[0].style.display = 'none';
+}
+
+
+function svgLabel(x, y, text) {
+    var lbl_height = 20;
+
+    var thisLabel = menu.append('g')
+        .classed('svgLabel', true)
+        .style("cursor", "default")
+
+    thisLabel.append('rect')
+        .attr('x', x)
+        .attr('y', y)
+        .attr('width', setting.menuWidht)
+        .attr('height', lbl_height)
+        .style('fill', '#00859b')
+
+
+    thisLabel.append('text')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', setting.menuSubtitleFontSize)
+        .attr('fill', '#ccf')
+        .attr('x', x + 5)
+        .attr("y", y + 15)
+        .text(text)
+
+}
+
+function D3Checkbox(x, y, name, initialStatus, method) {
+    this.x = x;
+    this.y = y;
+    this.name = name;
+    this.status = initialStatus || false;
+
+    var thisCheckbox = this;
+
+    this.clicked = function () {
+        thisCheckbox.status = !thisCheckbox.status;
+        thisCheckbox.d3object = svgCheckbox(x, y, name, method, thisCheckbox.status, thisCheckbox);
+        method();
+    }
+    this.d3object = svgCheckbox(x, y, name, method, this.status, this);
+
+}
+
+function svgCheckbox(x, y, text, method, checked, caller) {
+
+    menu.select('#language_' + text.split(' ').join('_')).remove()
+
+    var thisCheckbox = menu.append('g')
+        .attr('id', 'language_' + text.split(' ').join('_'))
+        .classed('svgCheckbox', true)
+        .style("cursor", "pointer")
+        .on('click', caller.clicked)
+
+    thisCheckbox.append('rect')
+        .attr('x', x)
+        .attr('y', y)
+        .attr('width', 10)
+        .attr('height', 10)
+        .style('fill', 'rgba(200,200,200,0.9)')
+
+
+    if (checked) {
+        thisCheckbox.append('path')
+            .attr('d', 'M' + x + ' ' + (y + 5) + ' L' + (x + 5) + ' ' + (y + 10) + ' L' + (x + 12) + ' ' + (y -2))
+            .style('stroke', 'gray')
+            .style('stroke-width', '4px')
+            .style('fill', 'rgba(0,0,0,0)')
+
+
+        thisCheckbox.append('path')
+            .attr('d', 'M' + x + ' ' + (y + 5) + ' L' + (x + 5) + ' ' + (y + 10) + ' L' + (x + 12) + ' ' + (y -2))
+            .style('stroke', '#33F')
+            .style('stroke-width', '2px')
+            .style('fill', 'rgba(0,0,0,0)')
+    }
+
+    thisCheckbox.append('text')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', setting.menuFontSize)
+        .attr('fill', '#ccc')
+        .attr('x', x + 15)
+        .attr("y", y + 10)
+        .text(text)
+
+    return thisCheckbox;
+
+}
+
+function svgSeparator(x, y) {
+    var thisSeparator = menu.append('line')
+        .attr('x1', x + 10)
+        .attr('y1', y)
+        .attr('x2', x + setting.menuWidht - 10)
+        .attr('y2', y)
+        .style('stroke', '#666')
+
+}
+
+function svgButton(x, y, text, method) {
+    var btn_height = 20;
+
+    var thisButton = menu.append('g')
+        .classed('svgButton', true)
+        .style("cursor", "pointer")
+        .on('click', method)
+
+    thisButton.append('rect')
+        .attr('x', x)
+        .attr('y', y)
+        .attr('width', setting.menuWidht - 40)
+        .attr('height', btn_height)
+        .style('fill', 'rgba(150,150,150,0.9)')
+
+    thisButton.append('line')
+        .attr('x1', x)
+        .attr('y1', y)
+        .attr('x2', x + setting.menuWidht - 40)
+        .attr('y2', y)
+        .style('stroke', 'white')
+
+    thisButton.append('line')
+        .attr('x1', x)
+        .attr('y1', y)
+        .attr('x2', x)
+        .attr('y2', y + btn_height)
+        .style('stroke', 'white')
+
+    thisButton
+        .append('text')
+        .attr('font-family', 'sans-serif')
+        .attr('font-size', setting.menuFontSize)
+        .attr('fill', '#000')
+        .attr('x', setting.menuWidht / 2)
+        .attr("y", y + 15)
+        .attr('font-weight', 'bold')
+        .text(text)
+        .style("text-anchor", "middle")
+}
+
+function closetooltip() {
+    tooltip.transition()
+        .style('opacity', 0)
+        .style('display', 'none');
+
+    d3.selectAll('.target')
+        .style('r', setting.targetRadio / currentZoom)
+
+    // restores the width of all the connections
+    d3.selectAll('.connection')
+        .style('stroke-width', (1 / currentZoom) + 'px')
+
+    // restart connection animations
+    animationsManager(true);
+
+    bTooltipActive = false;
 }
